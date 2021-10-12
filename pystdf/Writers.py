@@ -23,6 +23,7 @@ from time import strftime, localtime
 from xml.sax.saxutils import quoteattr
 from pystdf import V4
 import io
+import numpy as np
 import pandas as pd
 from datetime import datetime
 
@@ -215,6 +216,23 @@ class DataFrameWriter:
             df[c] = df[c].astype(int)
         df['file'] = self.input_filename
         df.sort_values(by=['PART_ID'], ascending=True, inplace=True)
+        try:
+            wafer_column = {[p for p in df.columns if p.lower().__contains__('wafer')][0]: 'wafer_number'}
+            df.rename(columns=wafer_column, inplace=True)
+        except IndexError:
+            df['wafer_number'] = np.NaN
+        try:
+            diex_column = {[p for p in df.columns if p.lower().__contains__('coord') and p.lower().__contains__('x')][0]: 'die_x'}
+            df.rename(columns=diex_column, inplace=True)
+        except IndexError:
+            df['die_x'] = np.NaN
+        try:
+            diey_column = {[p for p in df.columns if p.lower().__contains__('coord') and p.lower().__contains__('y')][0]: 'die_y'}
+            df.rename(columns=diey_column, inplace=True)
+        except IndexError:
+            df['die_y'] = np.NaN
+        df.rename(columns={'Lot id': 'lot_id'}, inplace=True)
+        # Saving data frame
         meta_columns = [p for p in df.columns if not (re.search('[0-9]+', p) or p == 'index')]
         parm_columns = [p for p in df.columns if re.search('[0-9]+', p)]
         if self.output_file_type == 'csv':
