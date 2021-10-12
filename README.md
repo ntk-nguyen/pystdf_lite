@@ -12,4 +12,4 @@ PySTDF Lite produces two data frames in CSV format and a JSON file for metadata:
 - Metadata in JSON format.
 
 ## Acknowledgement
-I would like to express my sincere gratitude to Casey Marshall who open-sourced this project.
+I'd' like to express my sincere gratitude to Casey Marshall who open-sourced this project.
