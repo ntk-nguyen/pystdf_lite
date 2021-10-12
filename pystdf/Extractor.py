@@ -35,7 +35,7 @@ def write_data_frame(filename, output_file_type=None):
         os.remove(output_filename)
     p = Parser(inp=open_file, reopen_fn=reopen_fn)
     p.addSink(
-        DataFrameWriter(input_file=filename)
+        DataFrameWriter(input_file=filename, output_file_type=output_file_type)
     )
     p.parse()
     open_file.close()
