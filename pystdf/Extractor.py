@@ -27,7 +27,7 @@ def make_function(filename):
     return _function, f
 
 
-def write_data_frame(filename):
+def write_data_frame(filename, output_file_type=None):
     reopen_fn, open_file = make_function(filename)
     base_filename = os.path.basename(filename)
     output_filename = f'{base_filename}_out-detailed.csv'
@@ -39,14 +39,3 @@ def write_data_frame(filename):
     )
     p.parse()
     open_file.close()
-
-
-def test():
-    file_names = [
-        r'C:\Users\Nguyen Nguyen\Documents\PythonProjects\pystdf\data\lot2.stdf.gz',
-        # r'C:\Users\Nguyen Nguyen\Downloads\stress_stdfs\M1BB-A0-W0---_4C66250-01_W01_20210520_230258_Datalog.stdf.gz',
-    ]
-    import glob
-    file_names = glob.glob(r'C:\Users\Nguyen Nguyen\Downloads\stress_stdfs\*.std*')
-    for f in file_names:
-        write_data_frame(f)
