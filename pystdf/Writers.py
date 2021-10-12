@@ -217,17 +217,22 @@ class DataFrameWriter:
         df['file'] = self.input_filename
         df.sort_values(by=['PART_ID'], ascending=True, inplace=True)
         try:
-            wafer_column = [p for p in df.columns if re.search('[0-9]+', p) and p.lower().__contains__('wafer')][0]
+            lot_column = [p for p in df.columns if re.search('[0-9]+', p) and p.lower().__contains__('ecid_read') and p.lower().__contains__('lot')][0]
+            df['lot_number'] = df[lot_column]
+        except IndexError:
+            df['lot_number'] = np.NaN
+        try:
+            wafer_column = [p for p in df.columns if re.search('[0-9]+', p) and p.lower().__contains__('ecid_read') and p.lower().__contains__('wafer')][0]
             df['wafer_number'] = df[wafer_column]
         except IndexError:
             df['wafer_number'] = np.NaN
         try:
-            diex_column = [p for p in df.columns if re.search('[0-9]+', p) and p.lower().__contains__('coord') and p.lower().__contains__('x')][0]
+            diex_column = [p for p in df.columns if re.search('[0-9]+', p) and p.lower().__contains__('ecid_read') and p.lower().__contains__('coord') and p.lower().__contains__('x')][0]
             df['die_x'] = df[diex_column]
         except IndexError:
             df['die_x'] = np.NaN
         try:
-            diey_column = [p for p in df.columns if re.search('[0-9]+', p) and p.lower().__contains__('coord') and p.lower().__contains__('y')][0]
+            diey_column = [p for p in df.columns if re.search('[0-9]+', p) and p.lower().__contains__('ecid_read') and p.lower().__contains__('coord') and p.lower().__contains__('y')][0]
             df['die_y'] = df[diey_column]
         except IndexError:
             df['die_y'] = np.NaN
