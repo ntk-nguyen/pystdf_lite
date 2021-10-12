@@ -213,4 +213,7 @@ class DataFrameWriter:
         df.sort_values(by=['PART_ID'], ascending=True, inplace=True)
         meta_columns = [p for p in df.columns if not (re.search('[0-9]+', p) or p == 'index')]
         parm_columns = [p for p in df.columns if re.search('[0-9]+', p)]
-        df[meta_columns + parm_columns].to_csv(self.output_file, index=False)
+        if self.output_file_type == 'csv':
+            df[meta_columns + parm_columns].to_csv(self.output_file, index=False)
+        else:
+            df[meta_columns + parm_columns].to_parquet(self.output_file, index=False)
