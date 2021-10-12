@@ -55,9 +55,13 @@ class DataFrameWriter:
         else:
             return str(value)
 
-    def __init__(self, input_file, output_file_type=None):
+    def __init__(self, input_file, output_dir=None, output_file_type=None):
         supported_files = ['csv', 'parquet']
         self.input_file = input_file
+        if output_dir is None:
+            self.ouput_dir = os.path.dirname(self.input_file)
+        else:
+            self.ouput_dir = output_dir
         if output_file_type not in supported_files:
             self.output_file_type = 'csv'
         else:
@@ -65,10 +69,10 @@ class DataFrameWriter:
         self.input_filename = os.path.basename(self.input_file).replace('.gz', '').replace('.stdf', '').\
             replace('.std', '')
         self.output_file = os.path.join(
-            os.path.dirname(self.input_file), f'{self.input_filename}.{self.output_file_type}'
+            self.ouput_dir, f'{self.input_filename}.{self.output_file_type}'
         )
-        self.limit_file = os.path.join(os.path.dirname(self.input_file), f'{self.input_filename}-limits.csv')
-        self.meta_file = os.path.join(os.path.dirname(self.input_file), f'{self.input_filename}-meta.json')
+        self.limit_file = os.path.join(self.ouput_dir, f'{self.input_filename}-limits.csv')
+        self.meta_file = os.path.join(self.output_dir, f'{self.input_filename}-meta.json')
         self.CURR_SQ = None
         self.start_timestamp = None
         self.end_timestamp = None
