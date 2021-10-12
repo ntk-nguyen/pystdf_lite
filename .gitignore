@@ -3,3 +3,5 @@
 *.swo
 .idea
 venv/
+build/
+*.egg-info
