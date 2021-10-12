@@ -217,17 +217,17 @@ class DataFrameWriter:
         df['file'] = self.input_filename
         df.sort_values(by=['PART_ID'], ascending=True, inplace=True)
         try:
-            wafer_column = {[p for p in df.columns if p.lower().__contains__('wafer')][0]: 'wafer_number'}
+            wafer_column = {[p for p in df.columns if re.search('[0-9]+', p) and p.lower().__contains__('wafer')][0]: 'wafer_number'}
             df.rename(columns=wafer_column, inplace=True)
         except IndexError:
             df['wafer_number'] = np.NaN
         try:
-            diex_column = {[p for p in df.columns if p.lower().__contains__('coord') and p.lower().__contains__('x')][0]: 'die_x'}
+            diex_column = {[p for p in df.columns if re.search('[0-9]+', p) and p.lower().__contains__('coord') and p.lower().__contains__('x')][0]: 'die_x'}
             df.rename(columns=diex_column, inplace=True)
         except IndexError:
             df['die_x'] = np.NaN
         try:
-            diey_column = {[p for p in df.columns if p.lower().__contains__('coord') and p.lower().__contains__('y')][0]: 'die_y'}
+            diey_column = {[p for p in df.columns if re.search('[0-9]+', p) and p.lower().__contains__('coord') and p.lower().__contains__('y')][0]: 'die_y'}
             df.rename(columns=diey_column, inplace=True)
         except IndexError:
             df['die_y'] = np.NaN
