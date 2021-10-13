@@ -56,7 +56,7 @@ class DataFrameWriter:
         else:
             return str(value)
 
-    def __init__(self, input_file, output_dir=None, output_file_type=None):
+    def __init__(self, input_file, output_dir=None, output_file_type=None, format_test_name=True):
         supported_files = ['csv', 'parquet']
         self.input_file = input_file
         if output_dir is None:
@@ -72,6 +72,7 @@ class DataFrameWriter:
         self.output_file = os.path.join(
             self.output_dir, f'{self.input_filename}.{self.output_file_type}'
         )
+        self.format_test_name = format_test_name
         self.limit_file = os.path.join(self.output_dir, f'{self.input_filename}-limits.csv')
         self.meta_file = os.path.join(self.output_dir, f'{self.input_filename}-meta.json')
         self.CURR_SQ = None
@@ -183,7 +184,8 @@ class DataFrameWriter:
         sbr_df = sbr_df[['SBIN_NUM', 'SBIN_NAM', 'SBIN_PF']]
         # Remove data after the last space in test names 
         # For example: OPENS ATEST_FORCE 386
-        ptr_df['TEST_TXT'] = ptr_df['TEST_TXT'].str.rsplit(' ', n=1, expand=True)[0]
+        if self.format_test_name:
+            ptr_df['TEST_TXT'] = ptr_df['TEST_TXT'].str.rsplit(' ', n=1, expand=True)[0]
         # Concatenate test numbers and test names
         ptr_df['TEST'] = ptr_df['TEST_NUM'].astype(str) + ':' + ptr_df['TEST_TXT']
         # Limit data frame
