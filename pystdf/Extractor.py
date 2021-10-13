@@ -27,7 +27,7 @@ def make_function(filename):
     return _function, f
 
 
-def write_data_frame(filename, output_dir=None, output_file_type=None):
+def write_data_frame(filename, output_dir=None, output_file_type=None, format_test_name=True):
     reopen_fn, open_file = make_function(filename)
     base_filename = os.path.basename(filename)
     output_filename = f'{base_filename}_out-detailed.csv'
@@ -35,7 +35,7 @@ def write_data_frame(filename, output_dir=None, output_file_type=None):
         os.remove(output_filename)
     p = Parser(inp=open_file, reopen_fn=reopen_fn)
     p.addSink(
-        DataFrameWriter(input_file=filename, output_dir=output_dir, output_file_type=output_file_type)
+        DataFrameWriter(input_file=filename, output_dir=output_dir, output_file_type=output_file_type, format_test_name=format_test_name)
     )
     p.parse()
     open_file.close()
