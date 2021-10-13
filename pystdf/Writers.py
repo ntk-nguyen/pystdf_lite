@@ -181,6 +181,9 @@ class DataFrameWriter:
         hbr_df = hbr_df[['HBIN_NUM', 'HBIN_NAM', 'HBIN_PF']]
         sbr_df.drop_duplicates(subset=['SBIN_NUM', 'SBIN_NAM'], keep='last', inplace=True)
         sbr_df = sbr_df[['SBIN_NUM', 'SBIN_NAM', 'SBIN_PF']]
+        # Remove data after the last space in test names 
+        # For example: OPENS ATEST_FORCE 386
+        ptr_df['TEST_TXT'] = ptr_df['TEST_TXT'].str.rsplit(' ', n=1)[0]
         # Concatenate test numbers and test names
         ptr_df['TEST'] = ptr_df['TEST_NUM'].astype(str) + ':' + ptr_df['TEST_TXT']
         # Limit data frame
