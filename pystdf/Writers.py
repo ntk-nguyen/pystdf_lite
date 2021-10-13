@@ -183,7 +183,7 @@ class DataFrameWriter:
         sbr_df = sbr_df[['SBIN_NUM', 'SBIN_NAM', 'SBIN_PF']]
         # Remove data after the last space in test names 
         # For example: OPENS ATEST_FORCE 386
-        ptr_df['TEST_TXT'] = ptr_df['TEST_TXT'].str.rsplit(' ', n=1)[0]
+        ptr_df['TEST_TXT'] = ptr_df['TEST_TXT'].str.rsplit(' ', n=1, expand=True)[0]
         # Concatenate test numbers and test names
         ptr_df['TEST'] = ptr_df['TEST_NUM'].astype(str) + ':' + ptr_df['TEST_TXT']
         # Limit data frame
