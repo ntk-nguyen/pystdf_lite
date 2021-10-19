@@ -242,10 +242,9 @@ class DataFrameWriter:
             df['die_y'] = df[diey_column]
         except IndexError:
             df['die_y'] = np.NaN
-        # Saving parametric data frame
+        # Saving bin and parametric data frame
         meta_columns = [p for p in df.columns if not (re.search('[0-9]+', p) or p == 'index')]
         parm_columns = [p for p in df.columns if re.search('[0-9]+', p)]
-        # Saving bin data frame
         df[meta_columns].to_csv(self.bin_file, index=False)
         if self.output_file_type == 'csv':
             df[meta_columns + parm_columns].to_csv(self.output_file, index=False)
