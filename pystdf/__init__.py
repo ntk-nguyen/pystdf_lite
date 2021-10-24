@@ -18,3 +18,4 @@
 #
 from pystdf.TableTemplate import TableTemplate
 from pystdf import Extractor
+from pystdf import DataFrameHelpers

@@ -22,6 +22,7 @@ import re
 from time import strftime, localtime
 from xml.sax.saxutils import quoteattr
 from pystdf import V4
+from pystdf import DataFrameHelpers
 import io
 import numpy as np
 import pandas as pd
@@ -185,10 +186,11 @@ class DataFrameWriter:
         sbr_df = sbr_df[['SBIN_NUM', 'SBIN_NAM', 'SBIN_PF']]
         # Remove data after the last space in test names 
         # For example: OPENS ATEST_FORCE 386
+        # Replace period with one underscore and space with two underscore
         if self.format_test_name:
-            ptr_df['TEST_TXT'] = ptr_df['TEST_TXT'].str.rsplit(' ', n=1, expand=True)[0]
+            ptr_df['TEST_TXT'] = ptr_df['TEST_TXT'].str.rsplit(' ', n=1, expand=True)[0].replace('.', '_').replace(' ', '__', regex=True).str.lower()
         # Concatenate test numbers and test names
-        ptr_df['TEST'] = ptr_df['TEST_NUM'].astype(str) + ':' + ptr_df['TEST_TXT']
+        ptr_df['TEST'] = ptr_df['TEST_NUM'].astype(str) + '__' + ptr_df['TEST_TXT']
         # Limit data frame
         limits_df = ptr_df[self.limit_columns].copy()
         limits_df.drop_duplicates(subset=['TEST'], inplace=True)
@@ -242,10 +244,15 @@ class DataFrameWriter:
             df['die_y'] = df[diey_column]
         except IndexError:
             df['die_y'] = np.NaN
+        ecid_columns = ['lot_number', 'wafer_number', 'die_x', 'die_y']
+        df['ecid'] = DataFrameHelpers.return_ecid_column(df[ecid_columns])
         # Saving bin and parametric data frame
         meta_columns = [p for p in df.columns if not (re.search('[0-9]+', p) or p == 'index')]
+        updated_meta_colummns = [p.lower().replace('.', '_').replace(' ', '_') for p in meta_columns]
+        meta_columns_dict = {p: p.lower().replace('.', '_').replace(' ', '_') for p in meta_columns}
+        df.rename(columns=meta_columns_dict, inplace=True)
         parm_columns = [p for p in df.columns if re.search('[0-9]+', p)]
-        df[meta_columns].to_csv(self.bin_file, index=False)
+        df[updated_meta_colummns].to_csv(self.bin_file, index=False)
         if self.output_file_type == 'csv':
             df[meta_columns + parm_columns].to_csv(self.output_file, index=False)
         else:
