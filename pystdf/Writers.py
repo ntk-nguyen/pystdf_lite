@@ -179,7 +179,9 @@ class DataFrameWriter:
         ptr_df = pd.read_csv(io.StringIO('\n'.join(self.ptr_data)), sep='\t')
         prr_df = pd.read_csv(io.StringIO('\n'.join(self.prr_data)), sep='\t')
         hbr_df = pd.read_csv(io.StringIO('\n'.join(self.summary_data['hbr'])), sep='\t')
+        hbr_df['HBIN_NUM'] = hbr_df['HBIN_NUM'].astype(int)
         sbr_df = pd.read_csv(io.StringIO('\n'.join(self.summary_data['sbr'])), sep='\t')
+        hbr_df['SBIN_NUM'] = hbr_df['HBIN_NUM'].astype(int)
         hbr_df.drop_duplicates(subset=['HBIN_NUM', 'HBIN_NAM'], keep='last', inplace=True)
         hbr_df = hbr_df[['HBIN_NUM', 'HBIN_NAM', 'HBIN_PF']]
         sbr_df.drop_duplicates(subset=['SBIN_NUM', 'SBIN_NAM'], keep='last', inplace=True)
@@ -205,6 +207,9 @@ class DataFrameWriter:
         df = pd.merge(ptr_df, prr_df, on=['index', 'HEAD_NUM', 'SITE_NUM'], how='outer')
         # Change Hard Bin and Soft Bin column names and merge to HBR and SBR
         df.rename(columns={'HARD_BIN': 'HBIN_NUM', 'SOFT_BIN': 'SBIN_NUM'}, inplace=True)
+        for c in ['HBIN_NUM', 'SBIN_NUM']:
+            df.loc[pd.isna(df[c]), c] = -1
+            df[c] = df[c].astype(int)
         df = pd.merge(df, hbr_df, on=['HBIN_NUM'], how='inner')
         df = pd.merge(df, sbr_df, on=['SBIN_NUM'], how='inner')
         # Adding some more meta data columns
