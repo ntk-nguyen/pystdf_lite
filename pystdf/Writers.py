@@ -249,12 +249,12 @@ class DataFrameWriter:
         df['ecid'] = DataFrameHelpers.return_ecid_column(df[ecid_columns])
         # Saving bin and parametric data frame
         meta_columns = [p for p in df.columns if not (re.search('[0-9]+', p) or p == 'index')]
-        updated_meta_colummns = [p.lower().replace('.', '_').replace(' ', '_') for p in meta_columns]
+        updated_meta_columns = [p.lower().replace('.', '_').replace(' ', '_') for p in meta_columns]
         meta_columns_dict = {p: p.lower().replace('.', '_').replace(' ', '_') for p in meta_columns}
         df.rename(columns=meta_columns_dict, inplace=True)
         parm_columns = [p for p in df.columns if re.search('[0-9]+', p)]
-        df[updated_meta_colummns].to_csv(self.bin_file, index=False)
+        df[updated_meta_columns].to_csv(self.bin_file, index=False)
         if self.output_file_type == 'csv':
-            df[meta_columns + parm_columns].to_csv(self.output_file, index=False)
+            df[updated_meta_columns + parm_columns].to_csv(self.output_file, index=False)
         else:
-            df[meta_columns + parm_columns].to_parquet(self.output_file, index=False)
+            df[updated_meta_columns + parm_columns].to_parquet(self.output_file, index=False)
