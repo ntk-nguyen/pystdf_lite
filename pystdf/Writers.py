@@ -196,6 +196,7 @@ class DataFrameWriter:
         limits_df.drop_duplicates(subset=['TEST'], inplace=True)
         limits_df['JOB_NAM'] = self.meta_data['JOB_NAM']
         limits_df['JOB_REV'] = self.meta_data['JOB_REV']
+        limits_df.columns = map(str.lower, limits_df.columns)
         limits_df.to_csv(self.limit_file, index=False)
         ptr_df.drop(labels=[p for p in self.limit_columns if p != 'TEST'], axis=1, inplace=True)
         # Transform from long to wide tables
