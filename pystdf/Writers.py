@@ -219,7 +219,10 @@ class DataFrameWriter:
             columns = V4.data_classes[k].fieldNames
             for c in columns:
                 if c in time_columns:
-                    df[c] = pd.to_datetime(datetime.strptime(self.meta_data[c], '%H:%M:%ST%d-%b-%Y'))
+                    try:
+                        df[c] = pd.to_datetime(datetime.strptime(self.meta_data[c], '%H:%M:%ST%d-%b-%Y'))
+                    except TypeError:
+                        pass
                 else:
                     df[c] = self.meta_data[c]
         # Adding WAFER_ID
