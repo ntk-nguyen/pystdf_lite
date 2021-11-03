@@ -39,10 +39,3 @@ def write_data_frame(filename, output_dir=None, output_file_type=None, format_te
     )
     p.parse()
     open_file.close()
-
-
-def test():
-    f = '/home/nnguyen/Projects/pystdf_lite/data/M1BB-A0-W0---_4C67397-01_W05_20210716_184043_Datalog.stdf.gz'
-    output_dir = os.path.dirname(f)
-    write_data_frame(filename=f, output_dir=output_dir, output_file_type='csv')
-

@@ -230,6 +230,7 @@ class DataFrameWriter:
         # Formatting data frame
         integer_columns = ['HEAD_NUM', 'SITE_NUM', 'NUM_TEST', 'PART_ID', 'TEST_T', 'HBIN_NUM', 'SBIN_NUM']
         for c in integer_columns:
+            df.loc[pd.isna(df[c]), c] = -1
             df[c] = df[c].astype(int)
         df['file'] = self.input_filename
         df.sort_values(by=['PART_ID'], ascending=True, inplace=True)
@@ -266,3 +267,35 @@ class DataFrameWriter:
             df[updated_meta_columns + parm_columns].to_csv(self.output_file, index=False)
         else:
             df[updated_meta_columns + parm_columns].to_parquet(self.output_file, index=False)
+
+def debug():
+    path = '/home/nnguyen/Projects/pystdf_lite/data/debug'
+    ptr_df = pd.read_csv(os.path.join(path, 'ptr_df.csv'))
+    prr_df = pd.read_csv(os.path.join(path, 'prr_df.csv'))
+    hbr_df = pd.read_csv(os.path.join(path, 'hbr_df.csv'))
+    sbr_df = pd.read_csv(os.path.join(path, 'sbr_df.csv'))
+    limit_columns = ['TEST', 'RES_SCAL', 'LLM_SCAL', 'HLM_SCAL', 'LO_LIMIT', 'HI_LIMIT', 'UNITS', 'LO_SPEC', 'HI_SPEC']
+    ptr_df['TEST_TXT'] = ptr_df['TEST_TXT'].str.rsplit(' ', n=1, expand=True)[0].replace('.', '_').replace(' ', '__', regex=True).str.lower()
+    # Concatenate test numbers and test names
+    ptr_df['TEST'] = ptr_df['TEST_NUM'].astype(str) + '__' + ptr_df['TEST_TXT']
+    ptr_df.drop(labels=[p for p in limit_columns if p != 'TEST'], axis=1, inplace=True)
+    # Transform from long to wide tables
+    index_columns = [p for p in ptr_df.columns if p not in ['TEST', 'TEST_NUM', 'TEST_TXT', 'RESULT']]
+    ptr_df = pd.pivot(ptr_df, index=index_columns, columns='TEST', values='RESULT').reset_index()
+    df = pd.merge(ptr_df, prr_df, on=['index', 'HEAD_NUM', 'SITE_NUM'], how='outer')
+    # Change Hard Bin and Soft Bin column names and merge to HBR and SBR
+    df.rename(columns={'HARD_BIN': 'HBIN_NUM', 'SOFT_BIN': 'SBIN_NUM'}, inplace=True)
+    for c in ['HBIN_NUM', 'SBIN_NUM']:
+        df.loc[pd.isna(df[c]), c] = -1
+        df[c] = df[c].astype(int)
+    # Updated November 03, 2021 to fix an issue where hbr and sbr are missing.
+    df = pd.merge(df, hbr_df, on=['HBIN_NUM'], how='left')
+    df = pd.merge(df, sbr_df, on=['SBIN_NUM'], how='left')
+    # Adding some more meta data columns
+    meta_classes_for_ptr = ['far', 'mir', 'mrr']
+    time_columns = ['SETUP_T', 'START_T', 'FINISH_T']
+    integer_columns = ['HEAD_NUM', 'SITE_NUM', 'NUM_TEST', 'PART_ID', 'TEST_T', 'HBIN_NUM', 'SBIN_NUM']
+    for c in integer_columns:
+        df.loc[pd.isna(df[c]), c] = -1
+        df[c] = df[c].astype(int)
+        df[c] = df[c].astype(int)
