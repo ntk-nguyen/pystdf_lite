@@ -92,7 +92,7 @@ class Parser(DataSource):
         try:
             val, = struct.unpack(str(slen) + "s", buf)
         except struct.error:
-            print(buf)
+            val, = struct.unpack(str(len(buf)) + "s", buf)
         return val.decode("ascii")
 
     def readBn(self, header):

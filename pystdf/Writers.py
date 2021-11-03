@@ -122,7 +122,6 @@ class DataFrameWriter:
         # Frequency: one per part tested
         # Location: Anywhere in the data stream after the corresponding PIR and before the MRR. Sent after completion of
         # testing each part.
-
         if data[0].__class__.__name__.lower() == 'bps' and 'SEQ_NAME' in data[0].fieldNames:
             fmt_val = self.csv_format(data[0], data[0].fieldNames.index("SEQ_NAME"),
                                       data[1][data[0].fieldNames.index("SEQ_NAME")])
@@ -210,8 +209,9 @@ class DataFrameWriter:
         for c in ['HBIN_NUM', 'SBIN_NUM']:
             df.loc[pd.isna(df[c]), c] = -1
             df[c] = df[c].astype(int)
-        df = pd.merge(df, hbr_df, on=['HBIN_NUM'], how='inner')
-        df = pd.merge(df, sbr_df, on=['SBIN_NUM'], how='inner')
+        # Updated November 03, 2021 to fix an issue where hbr and sbr are missing.
+        df = pd.merge(df, hbr_df, on=['HBIN_NUM'], how='left')
+        df = pd.merge(df, sbr_df, on=['SBIN_NUM'], how='left')
         # Adding some more meta data columns
         meta_classes_for_ptr = ['far', 'mir', 'mrr']
         time_columns = ['SETUP_T', 'START_T', 'FINISH_T']
