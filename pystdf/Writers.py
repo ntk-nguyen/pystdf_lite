@@ -228,7 +228,7 @@ class DataFrameWriter:
         # Adding WAFER_ID
         df['WAFER_ID'] = self.meta_data['WAFER_ID']
         # Formatting data frame
-        integer_columns = ['HEAD_NUM', 'SITE_NUM', 'NUM_TEST', 'PART_ID', 'TEST_T', 'HBIN_NUM', 'SBIN_NUM']
+        integer_columns = ['HEAD_NUM', 'SITE_NUM', 'NUM_TEST', 'PART_ID', 'TEST_T', 'HBIN_NUM', 'SBIN_NUM', 'PART_FLG']
         for c in integer_columns:
             df.loc[pd.isna(df[c]), c] = -1
             df[c] = df[c].astype(int)
@@ -294,8 +294,7 @@ def debug():
     # Adding some more meta data columns
     meta_classes_for_ptr = ['far', 'mir', 'mrr']
     time_columns = ['SETUP_T', 'START_T', 'FINISH_T']
-    integer_columns = ['HEAD_NUM', 'SITE_NUM', 'NUM_TEST', 'PART_ID', 'TEST_T', 'HBIN_NUM', 'SBIN_NUM']
+    integer_columns = ['HEAD_NUM', 'SITE_NUM', 'NUM_TEST', 'PART_ID', 'TEST_T', 'HBIN_NUM', 'SBIN_NUM', 'PART_FLG']
     for c in integer_columns:
         df.loc[pd.isna(df[c]), c] = -1
-        df[c] = df[c].astype(int)
         df[c] = df[c].astype(int)
