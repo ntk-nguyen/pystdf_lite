@@ -21,8 +21,8 @@ import os.path
 import re
 from time import strftime, localtime
 from xml.sax.saxutils import quoteattr
-from pystdf import V4
-from pystdf import DataFrameHelpers
+from pystdf import V4, DataFrameHelpers
+from pystdf.Types import FieldNames
 import io
 import numpy as np
 import pandas as pd
@@ -37,8 +37,9 @@ def format_by_type(value, field_type):
 
 
 class DataFrameWriter:
-    extra_entities = {'\0': ''}
 
+    extra_entities = {'\0': ''}
+    
     @staticmethod
     def csv_format(rectype, field_index, value):
         field_type = rectype.fieldStdfTypes[field_index]
@@ -67,7 +68,7 @@ class DataFrameWriter:
         if output_file_type not in supported_files:
             self.output_file_type = 'csv'
         else:
-            self.output_file_type = 'parquet'
+            self.output_file_type = output_file_type
         self.input_filename = os.path.basename(self.input_file).replace('.gz', '').replace('.stdf', '').\
             replace('.std', '')
         self.output_file = os.path.join(
@@ -82,14 +83,17 @@ class DataFrameWriter:
         self.end_timestamp = None
         self.file_name = None
         self.temperature = None
-        self.pir_columns = ['HEAD_NUM', 'SITE_NUM']
-        self.ptr_columns = ['HEAD_NUM', 'SITE_NUM', 'RESULT', 'TEST_TXT', 'TEST_NUM',
-                            'RES_SCAL', 'LLM_SCAL', 'HLM_SCAL', 'LO_LIMIT', 'HI_LIMIT', 'UNITS', 'LO_SPEC', 'HI_SPEC',
-                            'index']
-        self.prr_columns = ['HEAD_NUM', 'SITE_NUM', 'PART_FLG', 'NUM_TEST', 'HARD_BIN', 'SOFT_BIN',
-                            'X_COORD', 'Y_COORD', 'TEST_T', 'PART_ID', 'index']
-        self.limit_columns = ['TEST', 'RES_SCAL', 'LLM_SCAL', 'HLM_SCAL', 'LO_LIMIT', 'HI_LIMIT', 'UNITS',
-                              'LO_SPEC', 'HI_SPEC']
+        self.pir_columns = [FieldNames.head_number, FieldNames.site_number]
+        self.ptr_columns = [FieldNames.head_number, FieldNames.site_number, FieldNames.result, FieldNames.test_text, 
+                            FieldNames.test_number, FieldNames.resolution_scale, FieldNames.low_limit_scale, 
+                            FieldNames.high_limit_scale, FieldNames.low_limit, FieldNames.high_limit, FieldNames.units, 
+                            FieldNames.low_spec, FieldNames.high_spec, 'index']
+        self.prr_columns = [FieldNames.head_number, FieldNames.site_number, FieldNames.part_flag, FieldNames.num_test, 
+                            FieldNames.hard_bin, FieldNames.soft_bin, FieldNames.x_coordinate, FieldNames.y_coordinate, 
+                            FieldNames.test_time, FieldNames.part_id, 'index']
+        self.limit_columns = [FieldNames.test, FieldNames.resolution_scale, FieldNames.low_limit_scale, 
+                              FieldNames.high_limit_scale, FieldNames.low_limit, FieldNames.high_limit, 
+                              FieldNames.units, FieldNames.low_spec, FieldNames.high_spec]
         self.ptr_output_columns = self.prr_columns + [p for p in self.ptr_columns if p not in self.prr_columns]
         self.ptr_data = ['\t'.join(self.ptr_columns)]
         self.prr_data = ['\t'.join(self.prr_columns)]
@@ -100,7 +104,7 @@ class DataFrameWriter:
         self.prr_count = 0
         self.meta_classes = ['far', 'mir', 'mrr', 'wcr']
         self.meta_data = {c: None for p in self.meta_classes for c in V4.data_classes[p].fieldNames}
-        self.meta_data['WAFER_ID'] = None
+        self.meta_data[FieldNames.wafer_id] = None
         self.meta_data['filename'] = self.input_filename
 
     def before_begin(self, data_source):
@@ -122,9 +126,9 @@ class DataFrameWriter:
         # Frequency: one per part tested
         # Location: Anywhere in the data stream after the corresponding PIR and before the MRR. Sent after completion of
         # testing each part.
-        if data[0].__class__.__name__.lower() == 'bps' and 'SEQ_NAME' in data[0].fieldNames:
-            fmt_val = self.csv_format(data[0], data[0].fieldNames.index("SEQ_NAME"),
-                                      data[1][data[0].fieldNames.index("SEQ_NAME")])
+        if data[0].__class__.__name__.lower() == 'bps' and FieldNames.sequence_name in data[0].fieldNames:
+            fmt_val = self.csv_format(data[0], data[0].fieldNames.index(FieldNames.sequence_name),
+                                      data[1][data[0].fieldNames.index(FieldNames.sequence_name)])
             self.CURR_SQ = quoteattr(fmt_val, self.extra_entities)
         elif data[0].__class__.__name__.lower() == 'pir':
             self.part_count += 1
@@ -132,14 +136,16 @@ class DataFrameWriter:
             for c in self.pir_columns:
                 selected_data[c] = self.csv_format(data[0], data[0].fieldNames.index(c),
                                                    data[1][data[0].fieldNames.index(c)]).replace('\t', '')
-            self.part_id_dict[f"{selected_data['HEAD_NUM']}-{selected_data['SITE_NUM']}"] = selected_data['index'] = \
-                self.part_count
+            self.part_id_dict[f"{selected_data[FieldNames.head_number]}-{selected_data[FieldNames.site_number]}"] = \
+                selected_data['index'] = self.part_count
         elif data[0].__class__.__name__.lower() == 'ptr':
             selected_data = {}
             for c in [p for p in self.ptr_columns if p != 'index']:
                 selected_data[c] = self.csv_format(data[0], data[0].fieldNames.index(c),
                                                    data[1][data[0].fieldNames.index(c)]).replace('\t', '')
-            selected_data['index'] = self.part_id_dict[f"{selected_data['HEAD_NUM']}-{selected_data['SITE_NUM']}"]
+            selected_data['index'] = self.part_id_dict[
+                f"{selected_data[FieldNames.head_number]}-{selected_data[FieldNames.site_number]}"
+            ]
             self.ptr_data.append('\t'.join([f'{selected_data[c]}' for c in selected_data.keys()]))
         elif data[0].__class__.__name__.lower() == 'prr':
             self.prr_count += 1
@@ -147,7 +153,9 @@ class DataFrameWriter:
             for c in [p for p in self.prr_columns if p != 'index']:
                 selected_data[c] = self.csv_format(data[0], data[0].fieldNames.index(c),
                                                    data[1][data[0].fieldNames.index(c)]).replace('\t', '')
-            selected_data['index'] = self.part_id_dict[f"{selected_data['HEAD_NUM']}-{selected_data['SITE_NUM']}"]
+            selected_data['index'] = self.part_id_dict[
+                f"{selected_data[FieldNames.head_number]}-{selected_data[FieldNames.site_number]}"
+            ]
             self.prr_data.append('\t'.join([f'{selected_data[c]}' for c in selected_data.keys()]))
         elif data[0].__class__.__name__.lower() in self.summary_classes:
             data_class = data[0].__class__.__name__.lower()
@@ -162,9 +170,9 @@ class DataFrameWriter:
                 self.meta_data[c] = self.csv_format(data[0], data[0].fieldNames.index(c),
                                                     data[1][data[0].fieldNames.index(c)]).replace('\t', '')
         elif data[0].__class__.__name__.lower() == 'wir':
-            c = 'WAFER_ID'
-            self.meta_data[c] = self.csv_format(data[0], data[0].fieldNames.index(c),
-                                                data[1][data[0].fieldNames.index(c)]).replace('\t', '')
+            self.meta_data[FieldNames.wafer_id] = \
+            self.csv_format(data[0], data[0].fieldNames.index(FieldNames.wafer_id), \
+            data[1][data[0].fieldNames.index(FieldNames.wafer_id)]).replace('\t', '')
         # self.stream.write('/>\n')
 
     def after_complete(self, data_source):
@@ -178,43 +186,43 @@ class DataFrameWriter:
         ptr_df = pd.read_csv(io.StringIO('\n'.join(self.ptr_data)), sep='\t')
         prr_df = pd.read_csv(io.StringIO('\n'.join(self.prr_data)), sep='\t')
         hbr_df = pd.read_csv(io.StringIO('\n'.join(self.summary_data['hbr'])), sep='\t')
-        hbr_df['HBIN_NUM'] = hbr_df['HBIN_NUM'].astype(int)
+        hbr_df[FieldNames.hardbin_number] = hbr_df[FieldNames.hardbin_number].astype(int)
         sbr_df = pd.read_csv(io.StringIO('\n'.join(self.summary_data['sbr'])), sep='\t')
-        hbr_df['SBIN_NUM'] = hbr_df['HBIN_NUM'].astype(int)
-        hbr_df.drop_duplicates(subset=['HBIN_NUM', 'HBIN_NAM'], keep='last', inplace=True)
-        hbr_df = hbr_df[['HBIN_NUM', 'HBIN_NAM', 'HBIN_PF']]
-        sbr_df.drop_duplicates(subset=['SBIN_NUM', 'SBIN_NAM'], keep='last', inplace=True)
-        sbr_df = sbr_df[['SBIN_NUM', 'SBIN_NAM', 'SBIN_PF']]
+        hbr_df[FieldNames.softbin_number] = hbr_df[FieldNames.hardbin_number].astype(int)
+        hbr_df.drop_duplicates(subset=[FieldNames.hardbin_number, FieldNames.hardbin_name], keep='last', inplace=True)
+        hbr_df = hbr_df[[FieldNames.hardbin_number, FieldNames.hardbin_name, FieldNames.hardbin_passfail]]
+        sbr_df.drop_duplicates(subset=[FieldNames.softbin_number, FieldNames.softbin_name], keep='last', inplace=True)
+        sbr_df = sbr_df[[FieldNames.softbin_number, FieldNames.softbin_name, FieldNames.softbin_passfail]]
         # Remove data after the last space in test names 
         # For example: OPENS ATEST_FORCE 386
         # Replace period with one underscore and space with two underscore
         if self.format_test_name:
-            ptr_df['TEST_TXT'] = ptr_df['TEST_TXT'].str.rsplit(' ', n=1, expand=True)[0].replace('.', '_').replace(' ', '__', regex=True).str.lower()
+            ptr_df[FieldNames.test_text] = ptr_df[FieldNames.test_text].str.rsplit(' ', n=1, expand=True)[0].replace('.', '_').replace(' ', '__', regex=True).str.lower()
         # Concatenate test numbers and test names
-        ptr_df['TEST'] = ptr_df['TEST_NUM'].astype(str) + '__' + ptr_df['TEST_TXT']
+        ptr_df[FieldNames.test] = ptr_df[FieldNames.test_number].astype(str) + '__' + ptr_df[FieldNames.test_text]
         # Limit data frame
         limits_df = ptr_df[self.limit_columns].copy()
-        limits_df.drop_duplicates(subset=['TEST'], inplace=True)
-        limits_df['JOB_NAM'] = self.meta_data['JOB_NAM']
-        limits_df['JOB_REV'] = self.meta_data['JOB_REV']
+        limits_df.drop_duplicates(subset=[FieldNames.test], inplace=True)
+        limits_df[FieldNames.job_name] = self.meta_data[FieldNames.job_name]
+        limits_df[FieldNames.job_rev] = self.meta_data[FieldNames.job_rev]
         limits_df.columns = map(str.lower, limits_df.columns)
         limits_df.to_csv(self.limit_file, index=False)
-        ptr_df.drop(labels=[p for p in self.limit_columns if p != 'TEST'], axis=1, inplace=True)
+        ptr_df.drop(labels=[p for p in self.limit_columns if p != FieldNames.test], axis=1, inplace=True)
         # Transform from long to wide tables
-        index_columns = [p for p in ptr_df.columns if p not in ['TEST', 'TEST_NUM', 'TEST_TXT', 'RESULT']]
-        ptr_df = pd.pivot(ptr_df, index=index_columns, columns='TEST', values='RESULT').reset_index()
-        df = pd.merge(ptr_df, prr_df, on=['index', 'HEAD_NUM', 'SITE_NUM'], how='outer')
+        index_columns = [p for p in ptr_df.columns if p not in [FieldNames.test, FieldNames.test_number, FieldNames.test_text, FieldNames.result]]
+        ptr_df = pd.pivot(ptr_df, index=index_columns, columns=FieldNames.test, values=FieldNames.result).reset_index()
+        df = pd.merge(ptr_df, prr_df, on=['index', FieldNames.head_number, FieldNames.site_number], how='outer')
         # Change Hard Bin and Soft Bin column names and merge to HBR and SBR
-        df.rename(columns={'HARD_BIN': 'HBIN_NUM', 'SOFT_BIN': 'SBIN_NUM'}, inplace=True)
-        for c in ['HBIN_NUM', 'SBIN_NUM']:
+        df.rename(columns={FieldNames.hard_bin: FieldNames.hardbin_number, FieldNames.soft_bin: FieldNames.softbin_number}, inplace=True)
+        for c in [FieldNames.hardbin_number, FieldNames.softbin_number]:
             df.loc[pd.isna(df[c]), c] = -1
             df[c] = df[c].astype(int)
         # Updated November 03, 2021 to fix an issue where hbr and sbr are missing.
-        df = pd.merge(df, hbr_df, on=['HBIN_NUM'], how='left')
-        df = pd.merge(df, sbr_df, on=['SBIN_NUM'], how='left')
+        df = pd.merge(df, hbr_df, on=[FieldNames.hardbin_number], how='left')
+        df = pd.merge(df, sbr_df, on=[FieldNames.softbin_number], how='left')
         # Adding some more meta data columns
         meta_classes_for_ptr = ['far', 'mir', 'mrr']
-        time_columns = ['SETUP_T', 'START_T', 'FINISH_T']
+        time_columns = [FieldNames.setup_time, FieldNames.start_time, FieldNames.finish_time]
         for k in meta_classes_for_ptr:
             columns = V4.data_classes[k].fieldNames
             for c in columns:
@@ -226,36 +234,36 @@ class DataFrameWriter:
                 else:
                     df[c] = self.meta_data[c]
         # Adding WAFER_ID
-        df['WAFER_ID'] = self.meta_data['WAFER_ID']
+        df[FieldNames.wafer_id] = self.meta_data[FieldNames.wafer_id]
         # Formatting data frame
-        integer_columns = ['HEAD_NUM', 'SITE_NUM', 'NUM_TEST', 'PART_ID', 'TEST_T', 'HBIN_NUM', 'SBIN_NUM', 'PART_FLG']
+        integer_columns = [FieldNames.head_number, FieldNames.site_number, FieldNames.num_test, FieldNames.part_id, FieldNames.test_time, FieldNames.hardbin_number, FieldNames.softbin_number, FieldNames.part_flag]
         for c in integer_columns:
             df.loc[pd.isna(df[c]), c] = -1
             df[c] = df[c].astype(int)
         df['file'] = self.input_filename
-        df.sort_values(by=['PART_ID'], ascending=True, inplace=True)
+        df.sort_values(by=[FieldNames.part_id], ascending=True, inplace=True)
         try:
             lot_column = [p for p in df.columns if re.search('[0-9]+', p) and p.lower().__contains__('ecid_read') and p.lower().__contains__('lot')][0]
-            df['lot_number'] = df[lot_column]
+            df[FieldNames.lot_number] = df[lot_column]
         except IndexError:
-            df['lot_number'] = np.NaN
+            df[FieldNames.lot_number] = np.NaN
         try:
             wafer_column = [p for p in df.columns if re.search('[0-9]+', p) and p.lower().__contains__('ecid_read') and p.lower().__contains__('wafer')][0]
-            df['wafer_number'] = df[wafer_column]
+            df[FieldNames.wafer_number] = df[wafer_column]
         except IndexError:
-            df['wafer_number'] = np.NaN
+            df[FieldNames.wafer_number] = np.NaN
         try:
             diex_column = [p for p in df.columns if re.search('[0-9]+', p) and p.lower().__contains__('ecid_read') and p.lower().__contains__('coord') and p.lower().__contains__('x')][0]
-            df['die_x'] = df[diex_column]
+            df[FieldNames.die_x] = df[diex_column]
         except IndexError:
-            df['die_x'] = np.NaN
+            df[FieldNames.die_x] = np.NaN
         try:
             diey_column = [p for p in df.columns if re.search('[0-9]+', p) and p.lower().__contains__('ecid_read') and p.lower().__contains__('coord') and p.lower().__contains__('y')][0]
-            df['die_y'] = df[diey_column]
+            df[FieldNames.die_y] = df[diey_column]
         except IndexError:
-            df['die_y'] = np.NaN
-        ecid_columns = ['lot_number', 'wafer_number', 'die_x', 'die_y']
-        df['ecid'] = DataFrameHelpers.return_ecid_column(df[ecid_columns])
+            df[FieldNames.die_y] = np.NaN
+        ecid_columns = [FieldNames.lot_number, FieldNames.wafer_number, FieldNames.die_x, FieldNames.die_y]
+        df[FieldNames.ecid] = DataFrameHelpers.return_ecid_column(df[ecid_columns])
         # Saving bin and parametric data frame
         meta_columns = [p for p in df.columns if not (re.search('[0-9]+', p) or p == 'index')]
         updated_meta_columns = [p.lower().replace('.', '_').replace(' ', '_') for p in meta_columns]
@@ -267,34 +275,3 @@ class DataFrameWriter:
             df[updated_meta_columns + parm_columns].to_csv(self.output_file, index=False)
         else:
             df[updated_meta_columns + parm_columns].to_parquet(self.output_file, index=False)
-
-def debug():
-    path = '/home/nnguyen/Projects/pystdf_lite/data/debug'
-    ptr_df = pd.read_csv(os.path.join(path, 'ptr_df.csv'))
-    prr_df = pd.read_csv(os.path.join(path, 'prr_df.csv'))
-    hbr_df = pd.read_csv(os.path.join(path, 'hbr_df.csv'))
-    sbr_df = pd.read_csv(os.path.join(path, 'sbr_df.csv'))
-    limit_columns = ['TEST', 'RES_SCAL', 'LLM_SCAL', 'HLM_SCAL', 'LO_LIMIT', 'HI_LIMIT', 'UNITS', 'LO_SPEC', 'HI_SPEC']
-    ptr_df['TEST_TXT'] = ptr_df['TEST_TXT'].str.rsplit(' ', n=1, expand=True)[0].replace('.', '_').replace(' ', '__', regex=True).str.lower()
-    # Concatenate test numbers and test names
-    ptr_df['TEST'] = ptr_df['TEST_NUM'].astype(str) + '__' + ptr_df['TEST_TXT']
-    ptr_df.drop(labels=[p for p in limit_columns if p != 'TEST'], axis=1, inplace=True)
-    # Transform from long to wide tables
-    index_columns = [p for p in ptr_df.columns if p not in ['TEST', 'TEST_NUM', 'TEST_TXT', 'RESULT']]
-    ptr_df = pd.pivot(ptr_df, index=index_columns, columns='TEST', values='RESULT').reset_index()
-    df = pd.merge(ptr_df, prr_df, on=['index', 'HEAD_NUM', 'SITE_NUM'], how='outer')
-    # Change Hard Bin and Soft Bin column names and merge to HBR and SBR
-    df.rename(columns={'HARD_BIN': 'HBIN_NUM', 'SOFT_BIN': 'SBIN_NUM'}, inplace=True)
-    for c in ['HBIN_NUM', 'SBIN_NUM']:
-        df.loc[pd.isna(df[c]), c] = -1
-        df[c] = df[c].astype(int)
-    # Updated November 03, 2021 to fix an issue where hbr and sbr are missing.
-    df = pd.merge(df, hbr_df, on=['HBIN_NUM'], how='left')
-    df = pd.merge(df, sbr_df, on=['SBIN_NUM'], how='left')
-    # Adding some more meta data columns
-    meta_classes_for_ptr = ['far', 'mir', 'mrr']
-    time_columns = ['SETUP_T', 'START_T', 'FINISH_T']
-    integer_columns = ['HEAD_NUM', 'SITE_NUM', 'NUM_TEST', 'PART_ID', 'TEST_T', 'HBIN_NUM', 'SBIN_NUM', 'PART_FLG']
-    for c in integer_columns:
-        df.loc[pd.isna(df[c]), c] = -1
-        df[c] = df[c].astype(int)

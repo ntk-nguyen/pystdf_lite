@@ -17,6 +17,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 
+from enum import Enum
 from pystdf import TableTemplate
 
 
@@ -119,3 +120,46 @@ class StdfRecordMeta(type):
 
         # Proceed with class generation
         super(StdfRecordMeta, cls).__init__(name, bases, dct)
+
+
+class FieldNames(str, Enum):
+    head_number = 'HEAD_NUM'
+    site_number  = 'SITE_NUM'
+    result = 'RESULT'
+    test_text = 'TEST_TXT'
+    test_number = 'TEST_NUM'
+    resolution_scale = 'RES_SCAL'
+    low_limit_scale = 'LLM_SCAL'
+    high_limit_scale = 'HLM_SCAL'
+    low_limit = 'LO_LIMIT'
+    high_limit = 'HI_LIMIT'
+    units = 'UNITS'
+    low_spec = 'LO_SPEC'
+    high_spec = 'HI_SPEC'
+    part_flag = 'PART_FLG'
+    num_test = 'NUM_TEST' 
+    hard_bin = 'HARD_BIN'
+    soft_bin = 'SOFT_BIN'
+    x_coordinate = 'X_COORD' 
+    y_coordinate = 'Y_COORD'
+    test_time = 'TEST_T' 
+    part_id = 'PART_ID'
+    wafer_id = 'WAFER_ID'
+    sequence_name = 'SEQ_NAME'
+    hardbin_number = 'HBIN_NUM'
+    softbin_number = 'SBIN_NUM'
+    hardbin_passfail = 'HBIN_PF'
+    softbin_passfail = 'SBIN_PF'
+    hardbin_name = 'HBIN_NAM'
+    softbin_name = 'SBIN_NAM'
+    job_name = 'JOB_NAM'
+    job_rev = 'JOB_REV'
+    test = 'TEST'
+    setup_time = 'SETUP_T', 
+    start_time = 'START_T'
+    finish_time = 'FINISH_T'
+    lot_number = 'lot_number'
+    wafer_number = 'wafer_number'
+    die_x = 'die_x'
+    die_y = 'die_y'
+    ecid = 'ecid'
