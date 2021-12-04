@@ -4,5 +4,6 @@
 .idea
 venv/
 build/
+aws/
 data/debug/
 *.egg-info

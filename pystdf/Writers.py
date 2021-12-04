@@ -58,7 +58,7 @@ class DataFrameWriter:
         else:
             return str(value)
 
-    def __init__(self, input_file, output_dir=None, output_file_type=None, format_test_name=True):
+    def __init__(self, input_file, output_dir=None, output_file_type=None, format_test_name=True, parameter_expression=''):
         supported_files = ['csv', 'parquet']
         self.input_file = input_file
         if output_dir is None:
@@ -74,6 +74,7 @@ class DataFrameWriter:
         self.output_file = os.path.join(
             self.output_dir, f'{self.input_filename}.{self.output_file_type}'
         )
+        self.parameter_expression = parameter_expression
         self.format_test_name = format_test_name
         self.bin_file = os.path.join(self.output_dir, f'{self.input_filename}-bin.csv')
         self.limit_file = os.path.join(self.output_dir, f'{self.input_filename}-limits.csv')
@@ -87,10 +88,10 @@ class DataFrameWriter:
         self.ptr_columns = [FieldNames.head_number, FieldNames.site_number, FieldNames.result, FieldNames.test_text, 
                             FieldNames.test_number, FieldNames.resolution_scale, FieldNames.low_limit_scale, 
                             FieldNames.high_limit_scale, FieldNames.low_limit, FieldNames.high_limit, FieldNames.units, 
-                            FieldNames.low_spec, FieldNames.high_spec, 'index']
+                            FieldNames.low_spec, FieldNames.high_spec, 'row_id']
         self.prr_columns = [FieldNames.head_number, FieldNames.site_number, FieldNames.part_flag, FieldNames.num_test, 
                             FieldNames.hard_bin, FieldNames.soft_bin, FieldNames.x_coordinate, FieldNames.y_coordinate, 
-                            FieldNames.test_time, FieldNames.part_id, 'index']
+                            FieldNames.test_time, FieldNames.part_id, 'row_id']
         self.limit_columns = [FieldNames.test, FieldNames.resolution_scale, FieldNames.low_limit_scale, 
                               FieldNames.high_limit_scale, FieldNames.low_limit, FieldNames.high_limit, 
                               FieldNames.units, FieldNames.low_spec, FieldNames.high_spec]
@@ -137,23 +138,27 @@ class DataFrameWriter:
                 selected_data[c] = self.csv_format(data[0], data[0].fieldNames.index(c),
                                                    data[1][data[0].fieldNames.index(c)]).replace('\t', '')
             self.part_id_dict[f"{selected_data[FieldNames.head_number]}-{selected_data[FieldNames.site_number]}"] = \
-                selected_data['index'] = self.part_count
+                selected_data['row_id'] = self.part_count
         elif data[0].__class__.__name__.lower() == 'ptr':
             selected_data = {}
-            for c in [p for p in self.ptr_columns if p != 'index']:
+            for c in [p for p in self.ptr_columns if p != 'row_id']:
                 selected_data[c] = self.csv_format(data[0], data[0].fieldNames.index(c),
-                                                   data[1][data[0].fieldNames.index(c)]).replace('\t', '')
-            selected_data['index'] = self.part_id_dict[
+                                                data[1][data[0].fieldNames.index(c)]).replace('\t', '')
+            selected_data['row_id'] = self.part_id_dict[
                 f"{selected_data[FieldNames.head_number]}-{selected_data[FieldNames.site_number]}"
             ]
-            self.ptr_data.append('\t'.join([f'{selected_data[c]}' for c in selected_data.keys()]))
+            if self.parameter_expression == '':
+                self.ptr_data.append('\t'.join([f'{selected_data[c]}' for c in selected_data.keys()]))
+            else: 
+                if bool(re.search(self.parameter_expression, selected_data[FieldNames.test_text], re.IGNORECASE)):
+                    self.ptr_data.append('\t'.join([f'{selected_data[c]}' for c in selected_data.keys()]))
         elif data[0].__class__.__name__.lower() == 'prr':
             self.prr_count += 1
             selected_data = {}
-            for c in [p for p in self.prr_columns if p != 'index']:
+            for c in [p for p in self.prr_columns if p != 'row_id']:
                 selected_data[c] = self.csv_format(data[0], data[0].fieldNames.index(c),
                                                    data[1][data[0].fieldNames.index(c)]).replace('\t', '')
-            selected_data['index'] = self.part_id_dict[
+            selected_data['row_id'] = self.part_id_dict[
                 f"{selected_data[FieldNames.head_number]}-{selected_data[FieldNames.site_number]}"
             ]
             self.prr_data.append('\t'.join([f'{selected_data[c]}' for c in selected_data.keys()]))
@@ -211,7 +216,7 @@ class DataFrameWriter:
         # Transform from long to wide tables
         index_columns = [p for p in ptr_df.columns if p not in [FieldNames.test, FieldNames.test_number, FieldNames.test_text, FieldNames.result]]
         ptr_df = pd.pivot(ptr_df, index=index_columns, columns=FieldNames.test, values=FieldNames.result).reset_index()
-        df = pd.merge(ptr_df, prr_df, on=['index', FieldNames.head_number, FieldNames.site_number], how='outer')
+        df = pd.merge(ptr_df, prr_df, on=['row_id', FieldNames.head_number, FieldNames.site_number], how='outer')
         # Change Hard Bin and Soft Bin column names and merge to HBR and SBR
         df.rename(columns={FieldNames.hard_bin: FieldNames.hardbin_number, FieldNames.soft_bin: FieldNames.softbin_number}, inplace=True)
         for c in [FieldNames.hardbin_number, FieldNames.softbin_number]:
@@ -241,7 +246,7 @@ class DataFrameWriter:
             df.loc[pd.isna(df[c]), c] = -1
             df[c] = df[c].astype(int)
         df['file'] = self.input_filename
-        df.sort_values(by=[FieldNames.part_id], ascending=True, inplace=True)
+        df.sort_values(by=['row_id'], ascending=True, inplace=True)
         try:
             lot_column = [p for p in df.columns if re.search('[0-9]+', p) and p.lower().__contains__('ecid_read') and p.lower().__contains__('lot')][0]
             df[FieldNames.lot_number] = df[lot_column]
@@ -265,7 +270,7 @@ class DataFrameWriter:
         ecid_columns = [FieldNames.lot_number, FieldNames.wafer_number, FieldNames.die_x, FieldNames.die_y]
         df[FieldNames.ecid] = DataFrameHelpers.return_ecid_column(df[ecid_columns])
         # Saving bin and parametric data frame
-        meta_columns = [p for p in df.columns if not (re.search('[0-9]+', p) or p == 'index')]
+        meta_columns = [p for p in df.columns if not re.search('[0-9]+', p)]
         updated_meta_columns = [p.lower().replace('.', '_').replace(' ', '_') for p in meta_columns]
         meta_columns_dict = {p: p.lower().replace('.', '_').replace(' ', '_') for p in meta_columns}
         df.rename(columns=meta_columns_dict, inplace=True)
