@@ -186,7 +186,7 @@ class DataFrameWriter:
 
     def post_processing(self):
         with open(self.meta_file, 'w') as f:
-            json.dump(self.meta_data, f)
+            json.dump(self.meta_data, f, indent=4)
         # Merge PTR and PRR data
         ptr_df = pd.read_csv(io.StringIO('\n'.join(self.ptr_data)), sep='\t')
         prr_df = pd.read_csv(io.StringIO('\n'.join(self.prr_data)), sep='\t')
